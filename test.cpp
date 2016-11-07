@@ -6,12 +6,20 @@
 #include <sstream>
 using namespace std;
 
+/************宏定义区****************/
+#define P_Amount 20  //假定该文法展开后的产生式最多为20个
+#define RMAX 20  //假定FIRSTVT和LASTVT集中行上非终结符的个数最多为20个
+#define CMAX 20  //假定FIRSTVT和LASTVT集中列上终结符的个数最多为20个
+#define T_AMOUNT 20   //假定分析的文法的终结符最多为20个
 
-#define P_Amount 20
-#define RMAX 20
-#define CMAX 20
-#define NT_AMOUNT 20
-#define T_AMOUNT 20
+class G;
+/************函数声明区**************/
+void test1(G &);  //检测zero和first函数
+void test2(G &, bool FIRSTVT[RMAX][CMAX], bool LASTVT[RMAX][CMAX], int &, int &);  //检测second函数
+void test3(G &, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT]);  //检测third函数
+void test4(G &);  //检测four函数
+void test5(bool );  //检测GuiYueQi是否识别出待规约串,b为true，则说明能识别
+
 //文法结构体
 class G
 {
@@ -21,11 +29,6 @@ public:
 	string begin;  //文法开始符号
 	string P[P_Amount];  //产生式的集合
 	int P_Length;  //产生式的个数
-	bool FIRSTVT[RMAX][CMAX];  //非终结符的FIRSTVT集合
-	bool LASTVT[RMAX][CMAX];  //非终结符的FIRSTVT集合
-	int PRIORITY_TABLE[NT_AMOUNT][NT_AMOUNT];  //优先表，表内元素只有4种类型的值，-1代表行<列，1代表行>列，0代表行=列，2代表出错
-	int FR;  //记录F的有效行数
-	int FC;  //记录F的有效列数
 	int f[T_AMOUNT];  //符号栈内的优先级,f优先函数
 	int g[T_AMOUNT];  //符号栈外的优先级，g优先函数
 	G()
@@ -37,27 +40,6 @@ public:
 		P_Length = 0;
 		for (int i = 0; i < P_Amount; i++)
 			P[i] = "";
-		for (int i = 0; i < RMAX; i++)
-		{
-			for (int j = 0; j < CMAX; j++)
-			{
-				FIRSTVT[i][j] = false;
-			}
-		}
-		for (int i = 0; i < RMAX; i++)
-		{
-			for (int j = 0; j < CMAX; j++)
-			{
-				LASTVT[i][j] = false;
-			}
-		}
-		for (int i = 0; i < NT_AMOUNT; i++)
-		{
-			for (int j = 0; j < NT_AMOUNT; j++)
-			{
-				PRIORITY_TABLE[i][j] = 2;  //默认为出错状态
-			}
-		}
 		//初始状态下f和g内的元素都置为1
 		for (int i = 0; i < T_AMOUNT; i++)
 		{
@@ -85,33 +67,34 @@ void findor(string &str, char c, int *pos,int cap,int &len)  //在str中寻找出所有
 		//初始化
 		pos[i] = 0;
 	}
-	int temp=0;
+	int temp=0;  //表明每次查找的出发点
 	for (int i = 0; i < str.length(); i++)
 	{
 		int j=str.find(c, temp);
-		if (j == -1)
+		if (j == str.npos)  //已经找完了所有的‘|’
 		{
 			break;
 		}
-		pos[i] = j;
-		len++;
-		temp = j+1;
+		pos[i] = j;  //记录每个‘|’的位置
+		len++;  //记录pos数组的有效长度
+		temp = j+1; //更新出发点
 	}
 }
 //根据产生式得到终结符集合与非终结符集合
 void getSyms(string *strs, int len, string &T,string &NT) //strs为产生式集合，len为产生式个数
 {
 	string strTemp="";  
-	for (int i = 0; i < len; i++)
+	for (int i = 0; i < len; i++)  //先在每个产生式的首部找非终结符
 	{
 		if (strTemp.find(strs[i][0]) != -1)  //若是找到已存在的符号，跳过
 			continue;
 		strTemp += strs[i][0];
 	}
 	NT = strTemp;
-	for (int i = 0; i < len; i++)
+
+	for (int i = 0; i < len; i++)  //循环每个产生式，寻找非终结符与终结符集合
 	{
-		for (int j = 3; j < strs[i].length(); j++)
+		for (int j = 3; j < strs[i].length(); j++)  //从每个产生式的第四位开始，因为首部已经存入非终结符集合中去了，而第三位与第四位是“->”，不必讨论
 		{
 			if (strs[i][j] >= 'A' && strs[i][j] <= 'Z')  //非终结符
 			{
@@ -132,14 +115,14 @@ void getSyms(string *strs, int len, string &T,string &NT) //strs为产生式集合，le
 void zero(string *strs, int &len) //strs为输入的文法表达式，len为表达式的个数
 {
 	string StrTemp[P_Amount];
-	int lens,count=0;  //count记录新生成表达式的个数,lens记录每个
-	int pos[10];  
+	int lens,count=0;  //count记录新生成表达式的个数,lens记录每个产生式中‘|’的个数
+	int pos[10];  //记录每个产生式中的‘|’的位置
 	for (int i = 0; i < len; i++)  //将所有产生式按|隔开，生成多个产生式，存储到StrTemp中
 	{
 		lens = 0;
 		findor(strs[i], '|', pos, 10, lens);  //寻找这条表达式中所有“|”的位置，存放到pos中，10为其最大容量,lens为“|”个数
 
-		for (int z = 0; z < lens+1; z++)  //将一个产生式按|隔开，生成多个产生式，存储到StrTemp中，(len+1)代表要生成的表达式个数
+		for (int z = 0; z < lens+1; z++)  //将一个产生式按|隔开，生成多个产生式，存储到StrTemp中，(lens+1)代表每个原产生式要生成新表达式的个数
 		{
 			if (z == 0)
 			{
@@ -155,7 +138,7 @@ void zero(string *strs, int &len) //strs为输入的文法表达式，len为表达式的个数
 			}
 		}
 
-		count += lens + 1;
+		count += lens + 1;  //更新下一个产生式要产生的新产生式组在StrTemp的存储起始位置
 	}
 
 	//把StrTemp赋给strs
@@ -165,9 +148,10 @@ void zero(string *strs, int &len) //strs为输入的文法表达式，len为表达式的个数
 		strs[i] = StrTemp[i];
 	}
 }
-void test1(G &gm);  //声明
-void first(G &grammer,string strs[],int len)  //grammer为需要构造的文法对象，strs为经过zero后的文法表达式，len为表达式的个数
+
+void first(G &grammer,string strs[],int len)  //grammer为需要构造的文法对象，strs为经过zero函数后的文法表达式，len为表达式的个数
 {
+	//进行文法数据结构的基本初始化工作
 	grammer.begin = strs[0][0];  //开始符号
 	grammer.P_Length = len;  //产生式的个数
 	for (int i = 0; i < len; i++)  //得到产生式
@@ -192,22 +176,7 @@ void test1(G &gm)  //检测函数,这里检查文法数据结构的正确性
 	cout << endl;
 }
 
-void insert(G &gm, stack<Temp> &stck, char A, char a)  //
-{
-	int iA = gm.NT.find(A);
-	int ia = gm.T.find(a);
-	Temp tmp;
-	tmp.NT = A;
-	tmp.T = a;
-	
-	if (!gm.FIRSTVT[iA][ia])
-	{
-		gm.FIRSTVT[iA][ia] = true;
-		stck.push(tmp);
-	}
-}
-
-void insert1(G &gm, stack<Temp> &stck, char A, char a)  //
+void insert(G &gm, stack<Temp> &stck, char A, char a, bool VT[RMAX][CMAX])  //不分VT为FIRSTVT和LASTVT集合，栈不同自然使用的集合也就不同
 {
 	int iA = gm.NT.find(A);
 	int ia = gm.T.find(a);
@@ -215,20 +184,18 @@ void insert1(G &gm, stack<Temp> &stck, char A, char a)  //
 	tmp.NT = A;
 	tmp.T = a;
 
-	if (!gm.LASTVT[iA][ia])
+	if (!VT[iA][ia])
 	{
-		gm.LASTVT[iA][ia] = true;
+		VT[iA][ia] = true;
 		stck.push(tmp);
 	}
 }
 
-void test2(G &gm);  //测试gm的FIRSTVT和LASTVT集合
-
-void second(G &gm)  //gm为文法的四元组
+void second(G &gm,bool FIRSTVT[RMAX][CMAX],bool LASTVT[RMAX][CMAX],int &FR,int &FC)  //gm为文法的四元组
 {
-	gm.FR = gm.NT.length();
-	gm.FC = gm.T.length();
-	stack<Temp> stck;  
+	FR = gm.NT.length();
+	FC = gm.T.length();
+	stack<Temp> stck;
 	Temp tmpBa;
 
 	//得到G的FIRSTVT集合
@@ -238,16 +205,16 @@ void second(G &gm)  //gm为文法的四元组
 		{
 			if (gm.P[i][3] < 'A' || gm.P[i][3]>'Z')  //这个符号是终结符
 			{
-				insert(gm, stck, gm.P[i][0], gm.P[i][3]);
+				insert(gm, stck, gm.P[i][0], gm.P[i][3], FIRSTVT);
 			}
 		}
 		else if (gm.P[i][3] >= 'A' && gm.P[i][3] <= 'Z')  //右部的第一个符号为非终结符，那么加入右部的第二个符号
 		{
-			insert(gm, stck, gm.P[i][0], gm.P[i][4]);
+			insert(gm, stck, gm.P[i][0], gm.P[i][4], FIRSTVT);
 		}
 		else  //右部的第一个符号为终结符
 		{
-			insert(gm, stck, gm.P[i][0], gm.P[i][3]);
+			insert(gm, stck, gm.P[i][0], gm.P[i][3], FIRSTVT);
 		}
 	}
 
@@ -259,7 +226,7 @@ void second(G &gm)  //gm为文法的四元组
 		{
 			if (gm.P[i][0] != tmpBa.NT&&gm.P[i][3] == tmpBa.NT)  //找到形如A->B···的产生式，FIRSTVT(B)必然FIRSTVT(A)
 			{
-				insert(gm, stck, gm.P[i][0], tmpBa.T);
+				insert(gm, stck, gm.P[i][0], tmpBa.T, FIRSTVT);
 			}
 		}
 	}
@@ -271,16 +238,16 @@ void second(G &gm)  //gm为文法的四元组
 		{
 			if (gm.P[i][3] < 'A' || gm.P[i][3]>'Z')  //这个符号是终结符
 			{
-				insert1(gm, stck, gm.P[i][0], gm.P[i][3]);
+				insert(gm, stck, gm.P[i][0], gm.P[i][3], LASTVT);
 			}
 		}
 		else if (gm.P[i][3] >= 'A' && gm.P[i][3] <= 'Z')  //右部的最后一个符号为非终结符，那么加入右部的倒数第二个符号
 		{
-			insert1(gm, stck, gm.P[i][0], gm.P[i][gm.P[i].length()-2]);
+			insert(gm, stck, gm.P[i][0], gm.P[i][gm.P[i].length()-2], LASTVT);
 		}
 		else  //右部的最后一个符号为终结符
 		{
-			insert1(gm, stck, gm.P[i][0], gm.P[i][gm.P[i].length()-1]);
+			insert(gm, stck, gm.P[i][0], gm.P[i][gm.P[i].length()-1], LASTVT);
 		}
 	}
 
@@ -292,14 +259,14 @@ void second(G &gm)  //gm为文法的四元组
 		{
 			if (gm.P[i][0] != tmpBa.NT&&gm.P[i][gm.P[i].length()-1] == tmpBa.NT)  //找到形如A->···B的产生式，LASTVT(B)必然LASTVT(A)
 			{
-				insert1(gm, stck, gm.P[i][0], tmpBa.T);
+				insert(gm, stck, gm.P[i][0], tmpBa.T, LASTVT);
 			}
 		}
 	}
 
 }
 
-void test2(G &gm)
+void test2(G &gm, bool FIRSTVT[RMAX][CMAX], bool LASTVT[RMAX][CMAX], int &FR, int &FC)
 {
 	cout << "G的FIRSTVT集合：" << endl;
 	cout << "\t";
@@ -313,17 +280,17 @@ void test2(G &gm)
 		cout << gm.T[i] << "\t";
 	}
 
-	for (int i = 0; i < gm.FR; i++)
+	for (int i = 0; i < FR; i++)
 	{
 		cout << gm.NT[i] << "\t";
-		for (int j = 0; j < gm.FC; j++)
+		for (int j = 0; j < FC; j++)
 		{
-			if (j == gm.FC - 1)
+			if (j == FC - 1)
 			{
-				cout << gm.FIRSTVT[i][j] << endl;
+				cout << FIRSTVT[i][j] << endl;
 				break;
 			}
-			cout << gm.FIRSTVT[i][j] << "\t";
+			cout << FIRSTVT[i][j] << "\t";
 		}
 	}
 
@@ -338,25 +305,23 @@ void test2(G &gm)
 		}
 		cout << gm.T[i] << "\t";
 	}
-	for (int i = 0; i < gm.FR; i++)
+	for (int i = 0; i < FR; i++)
 	{
 		cout << gm.NT[i] << "\t";
-		for (int j = 0; j < gm.FC; j++)
+		for (int j = 0; j < FC; j++)
 		{
-			if (j == gm.FC - 1)
+			if (j == FC - 1)
 			{
-				cout << gm.LASTVT[i][j] << endl;
+				cout << LASTVT[i][j] << endl;
 				break;
 			}
-			cout << gm.LASTVT[i][j] << "\t";
+			cout << LASTVT[i][j] << "\t";
 		}
 	}
 	cout << endl;
 }
 
-void test3(G &gm);  //测试third函数
-
-void third(G &gm)  //gm为文法的数据结构
+void third(G &gm, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT], bool FIRSTVT[RMAX][CMAX], bool LASTVT[RMAX][CMAX])  //gm为文法的数据结构
 {
 	for (int i = 0; i < gm.P_Length; i++)
 	{
@@ -367,23 +332,23 @@ void third(G &gm)  //gm为文法的数据结构
 			{
 				int temp = gm.T.find(gm.P[i][j]);
 				int temp1 = gm.T.find(gm.P[i][j + 1]);
-				gm.PRIORITY_TABLE[temp][temp1] = 0;  //置为同等优先级
+				PRIORITY_TABLE[temp][temp1] = 0;  //置为同等优先级
 			}
 			if (j <= (lens - 3) && (gm.P[i][j]<'A' || gm.P[i][j]>'Z') && (gm.P[i][j + 2]<'A' || gm.P[i][j + 2]>'Z') && (gm.P[i][j + 1] >= 'A'&&gm.P[i][j + 1] <= 'Z'))  //Xi和X(i+2)为终结符，但X(i+1)为非终结符
 			{
 				int temp = gm.T.find(gm.P[i][j]);
 				int temp1 = gm.T.find(gm.P[i][j + 2]);
-				gm.PRIORITY_TABLE[temp][temp1] = 0;  //置为同等优先级
+				PRIORITY_TABLE[temp][temp1] = 0;  //置为同等优先级
 			}
 			if ((gm.P[i][j]<'A' || gm.P[i][j]>'Z') && (gm.P[i][j + 1] >= 'A' && gm.P[i][j + 1] <= 'Z'))  //Xi为终结符而X(i+1)为非终结符
 			{
 				for (int z = 0; z < gm.T.length(); z++)
 				{
-					if (gm.FIRSTVT[gm.NT.find(gm.P[i][j + 1])][z])
+					if (FIRSTVT[gm.NT.find(gm.P[i][j + 1])][z])
 					{
 						int temp = gm.T.find(gm.P[i][j]);
 						int temp1 = z;
-						gm.PRIORITY_TABLE[temp][temp1] = -1;  //置于列优先于行
+						PRIORITY_TABLE[temp][temp1] = -1;  //置于列优先于行
 					}
 				}
 			}
@@ -391,11 +356,11 @@ void third(G &gm)  //gm为文法的数据结构
 			{
 				for (int z = 0; z < gm.T.length(); z++)
 				{
-					if (gm.LASTVT[gm.NT.find(gm.P[i][j])][z])
+					if (LASTVT[gm.NT.find(gm.P[i][j])][z])
 					{
 						int temp = z;
 						int temp1 = gm.T.find(gm.P[i][j+1]);
-						gm.PRIORITY_TABLE[temp][temp1] = 1;  //置于行优先于列
+						PRIORITY_TABLE[temp][temp1] = 1;  //置于行优先于列
 					}
 				}
 			}
@@ -403,7 +368,7 @@ void third(G &gm)  //gm为文法的数据结构
 	}
 }
 
-void test3(G &gm)
+void test3(G &gm, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT])
 {
 	cout << "G的优先分析表：" << endl;
 	cout << "\t";
@@ -424,17 +389,15 @@ void test3(G &gm)
 		{
 			if (j == gm.T.length() - 1)
 			{
-				cout << gm.PRIORITY_TABLE[i][j] << endl;
+				cout << PRIORITY_TABLE[i][j] << endl;
 				break;
 			}
-			cout << gm.PRIORITY_TABLE[i][j] << "\t";
+			cout << PRIORITY_TABLE[i][j] << "\t";
 		}
 	}
 }
 
-void test4(G &gm);  //检测优先函数f和g
-
-void four(G &gm)  //构造优先函数f和g
+void four(G &gm, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT])  //构造优先函数f和g
 {
 	bool isChanged = true;  //isChanged代表上一次迭代f和g函数有没有发生变化，有为true
 	int lens = gm.T.length();
@@ -445,21 +408,21 @@ void four(G &gm)  //构造优先函数f和g
 		{
 			for (int j = 0; j < lens; j++)
 			{
-				if (gm.PRIORITY_TABLE[i][j] == 2)
+				if (PRIORITY_TABLE[i][j] == 2)
 					continue;
-				if (gm.PRIORITY_TABLE[i][j] == 1 && (gm.f[i] <= gm.g[j]))
+				if (PRIORITY_TABLE[i][j] == 1 && (gm.f[i] <= gm.g[j]))
 				{
 					gm.f[i] = gm.g[j] + 1;
 					isChanged = true;
 					continue;
 				}
-				if (gm.PRIORITY_TABLE[i][j] == -1 && (gm.f[i] >= gm.g[j]))
+				if (PRIORITY_TABLE[i][j] == -1 && (gm.f[i] >= gm.g[j]))
 				{
 					gm.g[j] = gm.f[i] + 1;
 					isChanged = true;
 					continue;
 				}
-				if (gm.PRIORITY_TABLE[i][j] == 0 && (gm.f[i] != gm.g[j]))
+				if (PRIORITY_TABLE[i][j] == 0 && (gm.f[i] != gm.g[j]))
 				{
 					if (gm.f[i] > gm.g[j])
 					{
@@ -511,8 +474,6 @@ void test4(G &gm)  //检测four函数
 		cout << gm.g[i] << "\t";
 	}
 }
-
-void test5(bool b);  //检测GuiYueQi是否识别出待规约串,b为true，则说明能识别
 
 bool GuiYueQi(G &gm, string str)  //gm为文法的数据结构，str为待规约串,能识别为true，否则为false
 {
@@ -582,41 +543,80 @@ void test5(bool b)
 	}
 }
 
-int main()
+void chuli02(G &gm, string str[], int &len)  //gm为文法数据结构，str为输入的文法产生式，len为产生式的个数
 {
-	G gm;
-	string str[10];
+	//下面定义的都是局部变量，在本过程结束后销毁，节省空间
+	bool FIRSTVT[RMAX][CMAX];  //非终结符的FIRSTVT集合
+	bool LASTVT[RMAX][CMAX];  //非终结符的LASTVT集合
+	int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT];  //优先表，表内元素只有4种类型的值，-1代表行<列，1代表行>列，0代表行=列，2代表出错
+	int FR;  //记录F的有效行数
+	int FC;  //记录F的有效列数
+	//FIRSTVT和LASTVT集合初始化
+	for (int i = 0; i < RMAX; i++)
+	{
+		for (int j = 0; j < CMAX; j++)
+		{
+			FIRSTVT[i][j] = false;
+			LASTVT[i][j] = false;
+		}
+	}
+	//优先分析表的初始化
+	for (int i = 0; i < T_AMOUNT; i++)
+	{
+		for (int j = 0; j < T_AMOUNT; j++)
+		{
+			PRIORITY_TABLE[i][j] = 2;  //默认为出错状态
+		}
+	}
+
+	zero(str, len);  //依据‘|’，拆分表达式   
+	first(gm, str, len);  //得到文法数据结构
+	test1(gm);  //检查zero()、first()函数
+
+	second(gm,FIRSTVT,LASTVT,FR,FC);  //得到每个非终结符的FIRSTVT和LASTVT集合
+	test2(gm,FIRSTVT,LASTVT,FR,FC);  //检测second函数
+
+	third(gm, PRIORITY_TABLE, FIRSTVT, LASTVT);  //得到优先分析表
+	test3(gm,PRIORITY_TABLE);  //检测third函数
+
+	four(gm, PRIORITY_TABLE);  //得到优先函数f和g
+	test4(gm);  //检测four函数
+}
+
+void chuli01(G &gm, string wenfaFilepath, string strRdceFilepath)  //gm为创建的文法数据结构，filepath为输入的文法文件路径,strRdceFilepath为待规约的输入串文件路径
+{
+	string str[10];  //产生式组
 	int len;  //输入的表达式个数
 	int i = 0;
+	string guiyuestr;  //规约串
 	//从文件读入文法
-	ifstream ifile("wenfa1.txt");  //打开wenfa.txt文件
+	ifstream ifile(wenfaFilepath);  //打开文法文件
 	while (ifile)
 	{
-		ifile >> str[i++];  //读入文法
+		ifile >> str[i++];  //读入该文法的产生式
 	}
 	ifile.close();  //关闭文件
-	len = i - 1;
-	zero(str, len);  //依据‘|’，拆分表达式
-	first(gm, str, len);  //得到文法数据结构
-	//test1(gm);  //检查zero()、first()函数
+	len = i - 1; 
 
-	second(gm);  //得到每个非终结符的FIRSTVT和LASTVT集合
-	//test2(gm);  //检测second函数
-
-	third(gm);  //得到优先分析表
-	//test3(gm);  //检测third函数
-
-	four(gm);  //得到优先函数f和g
-	//test4(gm);  //检测four函数
-
-	string guiyuestr;  //规约串
-	ifile.open("guiyuechuan3.txt");
+	//根据输入的文法构建算符优先文法分析表，进而得到gm的优先函数
+	chuli02(gm, str, len);  
+	
+	//输入规约串，在语法分析器中规约
+	ifile.open(strRdceFilepath);
 	stringstream io;
-	io <<ifile.rdbuf();
+	io << ifile.rdbuf();
 	io >> guiyuestr;
-	cout << "待规约串为："<< guiyuestr <<endl;
+	cout << "待规约串为：" << guiyuestr << endl;
+
 	bool b = GuiYueQi(gm, guiyuestr);  //规约器，规约str
 	test5(b);  //检测待规约串被规约器处理后的结果
+}
 
+int main()
+{
+	G gm;  //文法的数据结构
+	string wenfaFilepath = "wenfa2.txt";
+	string strRdceFilepath = "guiyuechuan1.txt";
+	chuli01(gm, wenfaFilepath, strRdceFilepath);  	
 	return 0;
 }
