@@ -11,15 +11,25 @@ using namespace std;
 #define RMAX 20  //¼Ù¶¨FIRSTVTºÍLASTVT¼¯ÖĞĞĞÉÏ·ÇÖÕ½á·ûµÄ¸öÊı×î¶àÎª20¸ö
 #define CMAX 20  //¼Ù¶¨FIRSTVTºÍLASTVT¼¯ÖĞÁĞÉÏÖÕ½á·ûµÄ¸öÊı×î¶àÎª20¸ö
 #define T_AMOUNT 20   //¼Ù¶¨·ÖÎöµÄÎÄ·¨µÄÖÕ½á·û×î¶àÎª20¸ö
-
+/************ÀàÉùÃ÷Çø****************/
 class G;
+class Temp;
 /************º¯ÊıÉùÃ÷Çø**************/
 void test1(G &);  //¼ì²âzeroºÍfirstº¯Êı
 void test2(G &, bool FIRSTVT[RMAX][CMAX], bool LASTVT[RMAX][CMAX], int &, int &);  //¼ì²âsecondº¯Êı
 void test3(G &, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT]);  //¼ì²âthirdº¯Êı
 void test4(G &);  //¼ì²âfourº¯Êı
 void test5(bool );  //¼ì²âGuiYueQiÊÇ·ñÊ¶±ğ³ö´ı¹æÔ¼´®,bÎªtrue£¬ÔòËµÃ÷ÄÜÊ¶±ğ
-
+/*
+void findor(string &, char, int *, int, int &);  //ÔÚstrÖĞÑ°ÕÒ³öËùÓĞ|µÄÎ»ÖÃ,pos¼ÇÂ¼ÆäÎ»ÖÃ,capÎªÎ»ÖÃÊı×éµÄÈİÁ¿£¬lenÎªposµÄÓĞĞ§³¤¶È
+void getSyms(string *, int , string &, string &);  //¸ù¾İ²úÉúÊ½µÃµ½ÖÕ½á·û¼¯ºÏÓë·ÇÖÕ½á·û¼¯ºÏ
+void zero(string *, int &);  //Õ¹¿ªÊäÈëµÄ±í´ïÊ½
+void first(G &, string, int);  //³õÊ¼»¯ÎÄ·¨µÄÊı¾İ½á¹¹
+void second(G &, bool, bool, int &, int &);  //µÃµ½Ã¿¸ö·ÇÖÕ½á·ûµÄFIRSTVTºÍLASTVT¼¯ºÏ
+void third(G &, int, bool, bool);  //µÃµ½Ëã·ûÓÅÏÈ·ÖÎö±í
+void four(G &, int);  //¹¹ÔìÎÄ·¨µÄÓÅÏÈº¯ÊıfºÍg
+bool GuiYueQi(G &, string );  //¹æÔ¼Æ÷
+*/
 //ÎÄ·¨½á¹¹Ìå
 class G
 {
@@ -442,6 +452,7 @@ void four(G &gm, int PRIORITY_TABLE[T_AMOUNT][T_AMOUNT])  //¹¹ÔìÓÅÏÈº¯ÊıfºÍg
 
 void test4(G &gm)  //¼ì²âfourº¯Êı
 {
+	cout << endl;
 	cout << "\t";
 	for (int i = 0; i < gm.T.length(); i++)
 	{
@@ -533,6 +544,7 @@ bool GuiYueQi(G &gm, string str)  //gmÎªÎÄ·¨µÄÊı¾İ½á¹¹£¬strÎª´ı¹æÔ¼´®,ÄÜÊ¶±ğÎªtr
 
 void test5(bool b)
 {
+	cout << endl;
 	if (b)
 	{
 		cout << "acc!" << endl;
@@ -543,7 +555,7 @@ void test5(bool b)
 	}
 }
 
-void chuli02(G &gm, string str[], int &len)  //gmÎªÎÄ·¨Êı¾İ½á¹¹£¬strÎªÊäÈëµÄÎÄ·¨²úÉúÊ½£¬lenÎª²úÉúÊ½µÄ¸öÊı
+void OPGPT(G &gm, string str[], int &len)  //gmÎªÎÄ·¨Êı¾İ½á¹¹£¬strÎªÊäÈëµÄÎÄ·¨²úÉúÊ½£¬lenÎª²úÉúÊ½µÄ¸öÊı
 {
 	//ÏÂÃæ¶¨ÒåµÄ¶¼ÊÇ¾Ö²¿±äÁ¿£¬ÔÚ±¾¹ı³Ì½áÊøºóÏú»Ù£¬½ÚÊ¡¿Õ¼ä
 	bool FIRSTVT[RMAX][CMAX];  //·ÇÖÕ½á·ûµÄFIRSTVT¼¯ºÏ
@@ -583,7 +595,7 @@ void chuli02(G &gm, string str[], int &len)  //gmÎªÎÄ·¨Êı¾İ½á¹¹£¬strÎªÊäÈëµÄÎÄ·¨
 	test4(gm);  //¼ì²âfourº¯Êı
 }
 
-void chuli01(G &gm, string wenfaFilepath, string strRdceFilepath)  //gmÎª´´½¨µÄÎÄ·¨Êı¾İ½á¹¹£¬filepathÎªÊäÈëµÄÎÄ·¨ÎÄ¼şÂ·¾¶,strRdceFilepathÎª´ı¹æÔ¼µÄÊäÈë´®ÎÄ¼şÂ·¾¶
+void OPGR(G &gm, string wenfaFilepath, string strRdceFilepath)  //gmÎª´´½¨µÄÎÄ·¨Êı¾İ½á¹¹£¬filepathÎªÊäÈëµÄÎÄ·¨ÎÄ¼şÂ·¾¶,strRdceFilepathÎª´ı¹æÔ¼µÄÊäÈë´®ÎÄ¼şÂ·¾¶
 {
 	string str[10];  //²úÉúÊ½×é
 	int len;  //ÊäÈëµÄ±í´ïÊ½¸öÊı
@@ -598,8 +610,7 @@ void chuli01(G &gm, string wenfaFilepath, string strRdceFilepath)  //gmÎª´´½¨µÄÎ
 	ifile.close();  //¹Ø±ÕÎÄ¼ş
 	len = i - 1; 
 
-	//¸ù¾İÊäÈëµÄÎÄ·¨¹¹½¨Ëã·ûÓÅÏÈÎÄ·¨·ÖÎö±í£¬½ø¶øµÃµ½gmµÄÓÅÏÈº¯Êı
-	chuli02(gm, str, len);  
+	OPGPT(gm, str, len);  //¸ù¾İÊäÈëµÄÎÄ·¨¹¹½¨Ëã·ûÓÅÏÈÎÄ·¨·ÖÎö±í£¬½ø¶øµÃµ½gmµÄÓÅÏÈº¯Êı
 	
 	//ÊäÈë¹æÔ¼´®£¬ÔÚÓï·¨·ÖÎöÆ÷ÖĞ¹æÔ¼
 	ifile.open(strRdceFilepath);
@@ -617,6 +628,6 @@ int main()
 	G gm;  //ÎÄ·¨µÄÊı¾İ½á¹¹
 	string wenfaFilepath = "wenfa2.txt";
 	string strRdceFilepath = "guiyuechuan1.txt";
-	chuli01(gm, wenfaFilepath, strRdceFilepath);  	
+	OPGR(gm, wenfaFilepath, strRdceFilepath);  	//OPGRÎªËã·ûÓÅÏÈÎÄ·¨¹æÔ¼º¯Êı
 	return 0;
 }
