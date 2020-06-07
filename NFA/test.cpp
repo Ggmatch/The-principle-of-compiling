@@ -2,7 +2,7 @@
 #include "Thompson.h"
 
 //Ö÷º¯Êý
-void main()
+int main()
 {
 	string Regular_Expression = "(a|b)*abb";
 	cell NFA_Cell;
@@ -17,4 +17,6 @@ void main()
 	NFA_Cell = express_2_NFA(Regular_Expression);
 	//ÏÔÊ¾
 	Display(NFA_Cell);
+
+	return 0;
 }

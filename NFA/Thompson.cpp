@@ -1,5 +1,3 @@
-#pragma once 
-
 #include "Thompson.h"
 
 int STATE_NUM = 0;
@@ -104,7 +102,7 @@ cell do_Join(cell Left, cell Right)
 		if (Right.EdgeSet[i].StartState.StateName.compare(Right.StartState.StateName) == 0)
 		{
 			Right.EdgeSet[i].StartState = Left.EndState;
-			STATE_NUM--;  
+			STATE_NUM--;
 		}
 		else if (Right.EdgeSet[i].EndState.StateName.compare(Right.StartState.StateName) == 0)
 		{
@@ -206,7 +204,7 @@ void input(string &RegularExpression)
 	{
 		cin >> RegularExpression;
 	} while (!check_legal(RegularExpression));
-	
+
 }
 /**检测输入的正则表达式是否合法
 */
@@ -251,8 +249,9 @@ int check_character(string check_string)
 int check_parenthesis(string check_string)
 {
 	int length = check_string.size();
-	char * check = new char[length+1];
-	strcpy_s(check, length+1, check_string.c_str());
+	//char * check = new char[length+1];
+	//wcscpy(check, length+1, check_string.c_str());
+	string check = check_string;
 	stack<int> STACK;
 	for (int i = 0; i<length; i++)
 	{
@@ -277,7 +276,7 @@ int check_parenthesis(string check_string)
 		cout << "请重新输入:" << endl;
 		return false;
 	}
-	
+
 	return true;
 }
 /**检测是否是字母
@@ -345,7 +344,7 @@ icp	 0	8	6	4	2	1
 
 /*********************运算符优先级关系表********************/
 /*
-	c1\c2	(	*	|	+	)	#   
+	c1\c2	(	*	|	+	)	#
 
 	(		<	<	<	<	=	>
 
